@@ -6,9 +6,9 @@ This document provides a complete framework for porting SONiC (Software for Open
 
 **Target Platform**: Extreme Networks X440-G2  
 **ASIC Vendor**: Broadcom  
-**Architecture**: x86_64  
-**Status**: Framework Complete - Ready for Implementation  
-**Estimated Effort**: 6-12 weeks (depending on hardware availability and documentation)
+**Architecture**: MIPS64 (Cavium Octeon III control plane)
+**Status**: Discovery in progress — not ready for implementation
+**Estimated Effort**: To be reassessed after MIPS64 boot/build feasibility and SAI support are confirmed.
 
 ---
 
@@ -374,4 +374,3 @@ The port is entirely feasible with dedicated effort and access to hardware docum
 **Document Created**: 2026-09-02  
 **Status**: Ready for Implementation  
 **Framework Version**: 1.0
-

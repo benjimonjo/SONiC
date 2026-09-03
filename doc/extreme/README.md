@@ -76,22 +76,27 @@ Welcome! This directory contains comprehensive documentation for porting SONiC t
    - **Time to read**: 20-25 minutes
    - **Read when**: After hardware discovery, guides next phase
 
+8. **[FEASIBILITY_ASSESSMENT.md](FEASIBILITY_ASSESSMENT.md)** - Go/No-Go Assessment ⭐ CRITICAL
+   - Explains why this is not yet a conventional platform port
+   - Defines the MIPS64, SAI, boot, and hardware-discovery gates
+   - **Read when**: Before creating any `sonic-buildimage` platform files
+
 ---
 
 ## 🎯 Current Status
 
-### Phase 1: Hardware Discovery - 90% Complete ✅
+### Phase 1: Hardware Discovery - active
 - ✅ Device connected and SSH access working
 - ✅ Linux shell access confirmed (`run script shell.py`)
 - ✅ CPU type identified: Cavium Octeon III (MIPS)
 - ✅ Kernel information gathered: 2.6.28-summit_octeon (2016)
-- ✅ Broadcom ASIC confirmed: **Hurricane2 (Dual-unit)**
-- ✅ ASIC model identification COMPLETE
+- ✅ Broadcom ASIC family confirmed: **Hurricane2 (dual-unit)**
+- ⏳ Exact BCM part number and usable SAI/SDK support still require confirmation
 - ⏳ I2C topology discovery (in progress)
 - ⏳ Port-to-lane mapping (depends on I2C completion)
 
 ### Key Discoveries
-**✅ ASIC Identified**: Broadcom Hurricane2 with dual forwarding units
+**✅ ASIC family identified**: Broadcom Hurricane2 with dual forwarding units
 - Unit 0: 28 ports (data + stacking ports 26-27)
 - Unit 1: 26 ports (data + stacking ports 28-29)
 - Each unit has dedicated memory and BCM848xx PHY
@@ -404,4 +409,3 @@ When you complete the port:
 **Happy Porting!** 🚀
 
 For questions or issues, refer to the appropriate document above or reach out to the SONiC community.
-

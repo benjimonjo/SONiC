@@ -1,271 +1,129 @@
-# Extreme Networks X440-G2 - Hardware Reference Document
+# Extreme Networks X440-G2 Hardware Reference
 
-**Discovery Date**: 2026-09-02  
-**Device IP**: 192.168.0.2  
-**Device Name**: benjimonjo-switch1  
+**Model**: X440G2-48p-10G4
+**Full model code**: 800618-00-11
+**Hardware revision**: 1711N-40116 Rev 11.0
+**Discovery date**: 2026-09-02
+**Evidence status**: Confirmed findings are distinguished from items requiring on-device probing.
 
-## Device Identification
+## Confirmed Platform Baseline
+
+| Area | Confirmed finding | Source |
+|---|---|---|
+| Front-panel data ports | 48 × 1GbE plus 4 × 10GbE SFP+ (52 total) | ExtremeXOS inventory / port status |
+| Switching architecture | Two Broadcom Hurricane2 forwarding units | Linux kernel log |
+| Control-plane CPU | Cavium Octeon III V0.2 (CN7010), MIPS64 | `/proc/cpuinfo` |
+| Kernel | Linux 2.6.28.9-summit_octeon, built 2016-06-16 | `/proc/version` |
+| Vendor OS | ExtremeXOS 21.1.1.4-patch1-5 | Device inventory |
+| Platform-management access | BusyBox shell available from ExtremeXOS via `run script shell.py` | On-device test |
+| RAM | `MemTotal: 976128 kB` (approximately 953 MiB) | `/proc/meminfo` |
+| Cooling | One fan tray with four fans reported | ExtremeXOS inventory |
+| Power | One internal PSU reported; a second PSU is not present | ExtremeXOS inventory |
+
+### Important Porting Consequence
+
+This is a **MIPS64 control-plane platform**, not an x86_64 platform. Existing SONiC x86_64 platform paths, prebuilt packages, and the old ExtremeXOS kernel cannot be assumed to be reusable. A viable port needs a supported MIPS64 build and boot strategy, as well as a SAI implementation compatible with the two Hurricane2 units.
+
+## Forwarding ASIC
+
+Linux boot messages identify two Hurricane2 units:
+
+```
+HURRICANE2 unit 0: TotalCells=0x3000, DedicatedCells=0x9ec,
+                   DynCells=0x2614, Ports=0x1d (28 26 2)
+HURRICANE2 unit 1: TotalCells=0x3000, DedicatedCells=0x9ec,
+                   DynCells=0x2614, Ports=0x1d (28 26 2)
+```
+
+| Property | Value | Confidence |
+|---|---|---|
+| ASIC vendor | Broadcom | Confirmed |
+| ASIC family | Hurricane2 | Confirmed from kernel log |
+| Number of forwarding units | 2 | Confirmed from kernel log |
+| Total buffer cells per unit | `0x3000` (12,288) | Confirmed from kernel log |
+| Dedicated / dynamic cells per unit | `0x9ec` / `0x2614` | Confirmed from kernel log |
+| BCM56640 B0 | `libbcmplat.so` contains `bcm56640_b0 v 1.3` | Candidate only; shared library also contains other ASIC definitions |
+| External port mapping | Not yet determined | Requires SDK/platform mapping evidence |
+| Exact BCM part number and SDK/SAI support | Not yet determined | Requires vendor or SDK evidence |
+
+The kernel message's port tuple is not a finished physical-port map. It establishes that the system has two forwarding units, but the physical-port-to-unit, BCM-port, lane, and stacking-port mapping remains an open discovery task. Likewise, a BCM56640 B0 string in a shared SDK library is insufficient to identify the installed chip, because the same library contains definitions for other ASICs.
+
+## Physical Interfaces
+
+| Interface | Confirmed details | Remaining work |
+|---|---|---|
+| Data ports 1–48 | 1GbE copper/RJ45 | Map each port to ASIC unit, BCM port, and lane |
+| Data ports 49–52 | 10GbE SFP+ | Verify module cages, lane mapping, and supported optics |
+| Management Ethernet | 10/100/1000 interface reported | Identify Linux interface, MAC source, and boot-time configuration |
+| Console | Present in the product family; connector/pinout not verified | Verify physical connector and UART settings |
+| Stacking | Kernel logs indicate stacking-related ports | Determine whether they can be disabled or require a SONiC-specific design |
+
+## Control Plane and Software Inventory
 
 | Property | Value |
-|----------|-------|
-| Model | X440-G2-48p-10G4 |
-| Full Model Code | 800618-00-11 |
-| Hardware Version | 1711N-40116 Rev 11.0 |
-| System MAC | 00:04:96:9D:3E:9F |
-| Current OS | ExtremeXOS 21.1.1.4-patch1-5 |
-| BootROM Version | 1.0.1.8 |
-| Current Status | OPERATIONAL |
-| Uptime | 2+ days |
+|---|---|
+| CPU | Cavium Octeon III V0.2 |
+| CPU architecture | MIPS64 |
+| Board identifier | `CN7010p1.2-1000-CP` |
+| Reported BogoMIPS | 2000.00 |
+| Kernel | `2.6.28.9-summit_octeon` |
+| Shell | BusyBox v1.13.4 |
+| Broadcom support modules observed | `linux_bcm_diag_full`, `bcmhelper`, `linux_uk_proxy`, `linux_kernel_bde`, `pciphymod` |
+| Extreme platform modules observed | `aspenpmap`, `spiFPGA`, `watchdog` |
 
-## Ports Configuration
+The boot command line specifies `console=ttyS0,9600`, one core (`coremask=0x1`, `numcores=1`), and boot partition 1. Storage is eMMC (`mmcblk0`) with boot, alternate boot, EXOS, configuration, and scratch partitions. ONIE availability and device-tree source remain unconfirmed.
 
-### Port Breakdown
-- **48x 1GbE ports** (ports 1-48)
-- **4x 10GbE ports** (ports 49-52)
-- **Total**: 52 ports
+## Platform Management
 
-### Port Details (Discovered)
-```
-Port 1:    1GbE - Not Ready
-Port 2:    1GbE - Linked at 100Mbps (likely 1GbE capable)
-Port 3-4:  1GbE - Linked at 1000Mbps
-Port 5-8:  1GbE - Not Ready
-Ports 49-52: 10GbE ports (specifics TBD)
-```
+Two Octeon I2C adapters are exposed (`i2c-0` and `i2c-1`), but no `/dev/i2c-*` nodes exist and `i2cdetect` is not installed. The only enumerated I2C client is an MCP7940 RTC on bus 1 at `0x6f`; no hwmon devices are exposed. Do not implement drivers based on common example addresses.
 
-### Port Numbering
-- ✅ Ports 1-48: Standard 1GbE RJ45 connectors
-- ✅ Ports 49-52: 10GbE SFP+ connectors
-- **Lane mapping**: TBD (need to identify ASIC port assignments)
+| Component | Status | Evidence needed before implementation |
+|---|---|---|
+| System EEPROM | SPI candidate: Microchip 23K256 (32 KiB) at `spi0.1` | Confirm contents, format, and whether it carries chassis identity |
+| Thermal sensors | Unknown | Device count, bus/address, sensor type, thresholds |
+| PSU monitoring | Unknown | Interface, bus/address, status and telemetry registers |
+| Fan controller | Unknown | Controller type, RPM/PWM paths, fault semantics |
+| LEDs / CPLD / FPGA | `spi0.2` exposes `spiFPGA`; control path unknown | FPGA register map and fan/PSU/LED ownership |
 
-## Power Supply
+The reported fan state (three at 0 RPM and one at 960 RPM) is an observation, not a diagnosis. Confirm the hardware inventory and platform alarm state before classifying any fan as failed.
 
-| Component | Status | Type |
-|-----------|--------|------|
-| PSU-1 | Operational | Internal Power Supply |
-| PSU-2 | Not Present | - |
-| Total PSUs | 1 | - |
+## Discovery Procedure
 
-**Notes**: 
-- Single internal PSU
-- May be redundant design capable of supporting second PSU
-- Current consumption and voltage ratings: TBD
+Enter the Linux shell from the ExtremeXOS CLI:
 
-## Cooling System
-
-| Component | Count | Status | Details |
-|-----------|-------|--------|---------|
-| Fans | 4 | Mixed | 3 Failed @ 0 RPM, 1 OK @ 960 RPM |
-| Fan Tray | 1 | Operational | Standard configuration |
-
-**Important**: Some fans are not spinning - may indicate:
-1. Not installed/present
-2. Hardware issue with failed fans
-3. Thermal shutdown or error condition
-
-## Thermal Management
-
-**Thermal Sensors**: TBD  
-**Temperature Monitoring**: TBD  
-**Shutdown Temperature**: TBD  
-**Warning Thresholds**: TBD  
-
-## ASIC & Forwarding Engine
-
-### ✅ ASIC IDENTIFIED!
-
-**ASIC Vendor**: Broadcom (Confirmed)
-
-**ASIC Family**: **Hurricane2** (Broadcom entry/mid-range family)
-
-**Key Findings**:
-- **Dual-unit configuration**: Unit 0 and Unit 1 (each with own ASIC)
-- **Initialization**: Both units initialized via `aspenCardInitSocBcm` 
-- **Per-unit port configuration**: 
-  - Unit 0: ~28 ports (includes 2 stacking ports: bcmport 26-27)
-  - Unit 1: ~26 ports (includes 2 stacking ports: bcmport 28-29)
-  - Total accessible: 48x 1GbE + 4x 10GbE (stacking ports are internal)
-- **Memory per unit**: 12KB dedicated + 9.6KB dynamic cells
-- **PHY configuration**: BCM848xx (Falcon) PHY on each unit
-
-**Discovery Method**:
-```
-dmesg output:
-{0}HURRICANE2 unit 0: TotalCells=0x3000, DedicatedCells=0x9ec, 
-                     DynCells=0x2614, Ports=0x1d (28 26 2)
-{0}HURRICANE2 unit 1: TotalCells=0x3000, DedicatedCells=0x9ec, 
-                     DynCells=0x2614, Ports=0x1d (28 26 2)
+```text
+run script shell.py
 ```
 
-**Important Note**:
-Hurricane2 is typically for smaller switches (24-28 ports). The fact that X440-G2 has 48+4 ports across dual units suggests:
-- Either special Hurricane2 variants with higher port counts
-- Or Extreme is using "Hurricane2" as their codename for something else
-- Further investigation needed to determine exact BCM model number
+Capture raw output with the commands below. This BusyBox image lacks `i2cdetect` and does not expose `/dev/i2c-*`; inspect sysfs rather than attempting a scan.
 
-**ASIC Memory Configuration**: 
-- Dedicated Cells: 0x9ec (2540 cells)
-- Dynamic Cells: 0x2614 (9748 cells)
-- Total Cells: 0x3000 (12288 cells)
+```bash
+cat /proc/cpuinfo
+cat /proc/meminfo
+cat /proc/version
+dmesg | grep -Ei 'hurricane|bcm|i2c|spi|fpga|fan|thermal|psu'
+lsmod
+ls -l /sys/class/i2c-dev
+ls -l /sys/bus/i2c/devices
+cat /sys/bus/i2c/devices/1-006f/name
+ls -l /sys/bus/spi/devices
+ls -l /sys/class/hwmon
+ls -l /sys/class/net
+```
 
-**Buffer Pool**: ~12KB per unit (limited)
-**L2 Table Size**: TBD  
-**L3 Table Size**: TBD
+Record the command, timestamp, raw output, and a cautious interpretation in `LINUX_SHELL_FINDINGS.md`. Do not use `i2cdump -f` against an unknown device in a production switch; forced reads can interfere with an active kernel driver.
 
-## I2C Bus Topology
+## Completion Criteria Before Platform Code
 
-### System EEPROM
-| Location | Address | Bus | Status |
-|----------|---------|-----|--------|
-| System EEPROM | 0x50 (TBD) | Bus 0 (TBD) | TBD |
+- [ ] Exact BCM device/SDK identity and evidence of usable SAI support
+- [ ] Supported boot and MIPS64 build strategy for SONiC
+- [ ] Physical-port to ASIC-unit/BCM-port/lane map, including stacking ports
+- [ ] I2C/SPI/GPIO topology and platform-device register maps
+- [ ] EEPROM format and chassis identity source
+- [ ] Fan, PSU, and thermal behaviour validated under safe test conditions
 
-### Thermal Sensors
-- Location(s): TBD
-- I2C Address(es): TBD  
-- Type (LM75, TMP75, etc.): TBD
-- Count: TBD
+## References
 
-### PSU Monitoring
-- PSU-1 Address: TBD
-- I2C Bus: TBD
-- Monitoring Type (SMBus, PMBus, etc.): TBD
-
-### Fan Controller
-- Controller Address: TBD
-- I2C Bus: TBD
-- PWM Control Support: TBD
-
-### CPLD/FPGA
-- Address: TBD
-- I2C Bus: TBD
-- Functions: LED, GPIO, Status monitoring
-
-## LED Control
-
-| LED | Purpose | Control Method | TBD |
-|-----|---------|-----------------|-----|
-| System LED | Power/Fault indicator | GPIO/I2C | TBD |
-| Port LEDs | Per-port link status | ASIC native | TBD |
-| Fan LEDs | Fan status | TBD | TBD |
-| PSU LEDs | PSU status | TBD | TBD |
-
-## Management Interfaces
-
-| Interface | Type | Connectivity | Notes |
-|-----------|------|--------------|-------|
-| Management Ethernet | 10/100/1000 | Built-in | IP: 192.168.0.2 |
-| Serial Console | RS-232 | DB9 (likely) | Speed: TBD, Pinout: TBD |
-| JTAG | Debug | Test connector | TBD |
-
-## CPU & Memory
-
-**DISCOVERED via Linux Shell**:
-
-| Component | Specification | Status |
-|-----------|---------------|--------|
-| CPU Model | Cavium Octeon III V0.2 | ✅ Confirmed |
-| CPU Architecture | MIPS (NOT x86_64) | ✅ Confirmed |
-| CPU Type | Unsupported Board (CN7010p1.2-1000-CP) | ✅ Confirmed |
-| CPU Cores | 1 (shown, likely more) | Partial |
-| CPU Speed | BogoMIPS: 2000.00 | Partial |
-| RAM Size | TBD | TBD |
-| RAM Type | TBD | TBD |
-| Storage | TBD | TBD |
-
-**Linux Kernel**:
-- **Version**: 2.6.28.9-summit_octeon
-- **Build Date**: Thu Jun 16 14:57:28 EDT 2016
-- **Architecture**: MIPS64
-- **Compiled by**: release-manager@currituck.extremenetworks.com
-
-**Shell Access**: ✅ Linux shell accessible via `run script shell.py` in ExtremeXOS CLI
-
-## Software Information
-
-| Item | Value |
-|------|-------|
-| Current OS | ExtremeXOS 21.1.1.4-patch1-5 |
-| BootROM | 1.0.1.8 |
-| Diagnostics Version | 5.4 |
-| ONIE Support | TBD (unknown) |
-| Primary Image | 21.1.1.4 (currently booted) |
-| Secondary Image | 21.1.1.4 (available) |
-
-## Known Issues & Status
-
-### Current Issues
-1. **Fans**: 3 fans not spinning (0 RPM) - needs investigation
-2. **ASIC Model**: Not yet identified - critical for SAI selection
-3. **I2C Topology**: Not yet mapped - critical for platform drivers
-
-### Missing Information (Priority Order)
-
-**CRITICAL (needed before implementation)**:
-- [ ] ASIC model and type
-- [ ] ASIC SAI support status
-- [ ] Broadcom SDK version compatibility
-- [ ] I2C bus topology and device addresses
-- [ ] Port-to-ASIC lane mapping
-- [ ] EEPROM format and location
-
-**IMPORTANT (needed for driver development)**:
-- [ ] CPU model and specifications
-- [ ] Memory configuration
-- [ ] Thermal sensor types and addresses
-- [ ] PSU monitoring interface
-- [ ] Fan PWM control mechanism
-- [ ] LED control method
-
-**NICE-TO-HAVE (helpful for optimization)**:
-- [ ] Power consumption specifications
-- [ ] Thermal design specifications
-- [ ] Performance benchmarks
-- [ ] Known Extreme Networks/Broadcom errata
-
-## Physical Specifications
-
-| Aspect | Value | Status |
-|--------|-------|--------|
-| Form Factor | 1RU Rackmount | Confirmed |
-| Port Density | 48x1G + 4x10G | Confirmed |
-| Dimensions | TBD | TBD |
-| Weight | TBD | TBD |
-| Operating Temperature | TBD | TBD |
-| Max Power Consumption | TBD | TBD |
-
-## Next Steps for Hardware Discovery
-
-1. **ASIC Identification** (CRITICAL)
-   - Check Extreme Networks X440-G2 documentation
-   - Look for any hardware datasheets
-   - Contact Extreme Networks support
-   - Attempt to access Linux kernel (if possible) to read hardware info
-
-2. **I2C Bus Mapping**
-   - Identify I2C buses and devices via Linux (if accessible)
-   - Document all device addresses
-   - Determine communication protocols
-
-3. **Port Mapping**
-   - Get physical-to-ASIC port mapping
-   - Document lane configuration
-   - Confirm breakout port configurations
-
-4. **Documentation Collection**
-   - Collect all available hardware manuals
-   - Get Broadcom SAI SDK documentation (once ASIC identified)
-   - Request EEPROM format documentation
-
-## References & Resources
-
-- Extreme Networks X440 Series Documentation
-- Broadcom SAI SDK (version TBD)
-- Broadcom BCM56960/BCM56970/BCM56980 Datasheets (as applicable)
-- SONiC Platform Integration Guide
-
----
-
-**Status**: Initial hardware discovery complete - awaiting ASIC identification  
-**Last Updated**: 2026-09-02  
-**Next Review**: After ASIC model confirmation
-
+- [Linux shell discovery report](LINUX_SHELL_FINDINGS.md)
+- [Current discovery plan](NEXT_STEPS.md)
+- [Porting high-level design](x440g2_hld.md)

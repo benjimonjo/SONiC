@@ -1,12 +1,36 @@
 # X440-G2 Linux Shell Discovery Report
 
-**Date**: 2026-09-02  
+**Dates**: 2026-09-02 and 2026-09-03
 **Method**: Direct Linux shell access via `run script shell.py`  
 **Status**: Phase 1 Hardware Discovery (Advanced)  
 
 ## 🎯 Executive Summary
 
-Successfully accessed Linux shell on X440-G2 device and gathered critical system information. **Key Blocker Remains**: ASIC model identification among 3 candidates (BCM56640, BCM56840, BCM56850). All other information gathering can now proceed with direct Linux access.
+Linux shell access is working. The control plane, dual-unit Hurricane2 ASIC family, boot media, and part of the platform-management topology are now confirmed. The remaining blockers are the exact BCM part number and SAI/SDK support, a MIPS64 SONiC boot/build path, the physical port map, and the management paths hidden behind the SPI FPGA.
+
+## 2026-09-03 Discovery Results
+
+| Area | Confirmed result |
+|---|---|
+| RAM | `MemTotal: 976128 kB` (approximately 953 MiB) |
+| I2C controllers | `i2c-0` and `i2c-1`, both named `OCTEON adapter` |
+| I2C device | Bus 1 address `0x6f`: Microchip MCP7940 RTC (`rtc-ds1307` driver) |
+| I2C userspace access | No `/dev/i2c-*` nodes; `i2cdetect` is not installed |
+| Hardware monitoring | No devices exposed under `/sys/class/hwmon` |
+| SPI devices | `spi0.1`: Microchip 23K256, 32 KiB EEPROM; `spi0.2`: `spiFPGA` |
+| Persistent storage | eMMC (`mmcblk0`) with boot, alternate boot, EXOS, configuration, and scratch partitions |
+| Console | Kernel command line specifies `console=ttyS0,9600` |
+| Management interface | `eth0` is present, alongside proprietary Broadcom and packet interfaces |
+
+**Interpretation**: The available evidence does not support the old assumption of a system EEPROM at I2C `0x50`. The identity EEPROM is likely the SPI 23K256 device, but its contents and format have not been read or confirmed. The FPGA is a likely gateway for fan, PSU, LED, or sensor functions; its interface must be discovered from the platform driver or vendor documentation.
+
+### Access Note
+
+After the successful read-only sessions, two further SSH connection attempts on 2026-09-03 were reset by the device during key exchange. No command ran in either attempt. Treat this as a transient access limitation; do not continue retrying automatically. Resume the FPGA and Broadcom-interface probes after confirming that the management plane accepts SSH connections again.
+
+### ASIC Library Evidence
+
+`libbcmplat.so` contains both the `hurricane2` family string and `bcm56640_b0 v 1.3 SV 2012/05/22`. It also contains register definitions for several chips, including BCM56150, BCM56640, BCM56840, and BCM56850. This confirms that library strings are not a definitive hardware-ID source. Treat BCM56640 B0 as a strong candidate requiring confirmation from a runtime SDK query, board documentation, or a supported diagnostic command.
 
 ---
 
@@ -84,9 +108,9 @@ aspenpmap            # Aspen platform mapping (Extreme-specific)
 
 ---
 
-### 5. **ASIC Model Investigation Results**
+### 5. **Historic ASIC String Search (Superseded)**
 
-**Status**: 3 candidates identified, need to narrow down
+**Status**: Superseded by the Hurricane2 kernel identification below. The library strings only show that a multi-chip SDK was present and do not identify this device.
 
 **Analysis Method**:
 - Extracted all strings from `/exos/lib/*.so*`

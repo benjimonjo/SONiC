@@ -1,5 +1,7 @@
 # Extreme Networks X440-G2 SONiC Port - Implementation Guide
 
+> **Status — do not implement from the templates below yet.** The platform is MIPS64 with two Broadcom Hurricane2 forwarding units. Many legacy examples in this guide still assume an x86_64/Tomahawk platform and placeholder I2C addresses. Use the [hardware reference](x440g2_hardware_reference.md) and [next-steps plan](NEXT_STEPS.md) as the source of truth until the exact BCM device, SAI support, boot path, and port map are verified.
+
 ## Overview
 
 This guide provides step-by-step instructions for porting SONiC to the Extreme Networks X440-G2 platform. It covers the complete development cycle from hardware analysis to testing.
@@ -1330,4 +1332,3 @@ sudo journalctl -xe | head -50
 3. Keep detailed notes of hardware I2C addresses and pin configurations
 4. Use `i2cdump` to verify sensor values before implementing drivers
 5. Consult the SONiC community early and often
-

@@ -3,25 +3,26 @@
 ## Essential Hardware Discovery Commands
 
 ```bash
-# Run these commands on the hardware (once ONIE is available)
+# Run these read-only commands from the ExtremeXOS Linux shell (`run script shell.py`).
+# ONIE availability is not confirmed.
 
-# Identify I2C devices
-i2cdetect -l           # List all I2C buses
-i2cdetect 0            # Scan bus 0
-i2cdetect 1            # Scan bus 1
-i2cdetect 2            # Scan bus 2
-# Continue for all buses
+# Identify I2C and SPI devices. The current BusyBox image has no `i2cdetect`
+# and no `/dev/i2c-*` nodes.
+ls -l /sys/class/i2c-dev
+ls -l /sys/bus/i2c/devices
+ls -l /sys/bus/spi/devices
+cat /sys/bus/i2c/devices/1-006f/name
 
-# Read EEPROM
-i2cdump -y 0 0x50      # Read EEPROM at address 0x50 on bus 0
+# The confirmed EEPROM candidate is SPI `spi0.1` (Microchip 23K256, 32 KiB).
+# Do not read it until a safe driver interface and data format are known.
 
 # Identify CPU and ASIC
 lscpu                  # CPU information
 lspci                  # ASIC and device information
 cat /proc/cpuinfo      # Detailed CPU info
 
-# Check thermal sensors
-find /sys -name "*temp*" -type f | head -20
+# Check thermal sensors. No hwmon devices are currently exposed.
+ls -l /sys/class/hwmon
 
 # List all GPIO
 gpioinfo               # GPIO controller information
@@ -94,19 +95,18 @@ SAI_PROFILE_ID=0
 SAI_DEFAULT_VLAN_ID=1
 ```
 
-## Common I2C Device Addresses
+## Confirmed Management-Device Topology
 
-| Device | Typical Address | Bus | Purpose |
-|--------|-----------------|-----|---------|
-| System EEPROM | 0x50 | 0 | Platform ID, S/N, MAC |
-| Thermal Sensor 1 | 0x4C | 0 | ASIC temp |
-| Thermal Sensor 2 | 0x4D | 0 | Ambient temp |
-| PSU 1 | 0x58 | 1 | Power supply monitoring |
-| PSU 2 | 0x59 | 1 | Power supply monitoring |
-| Fan Controller | 0x60-0x6F | 2 | Fan speed/PWM control |
-| CPLD | 0x32 | Varies | LED, GPIO control |
+| Device | Address / path | Status |
+|--------|----------------|--------|
+| Octeon I2C adapter | `i2c-0` | Present |
+| Octeon I2C adapter | `i2c-1` | Present |
+| MCP7940 RTC | I2C bus 1, `0x6f` | Present (`rtc-ds1307` driver) |
+| Microchip 23K256 EEPROM | `spi0.1` | Present; format not confirmed |
+| Platform FPGA | `spi0.2` | Present; register map not confirmed |
+| Thermal / PSU / fan controller | Unknown | Not exposed through hwmon |
 
-**FIXME**: Update with actual X440-G2 device map
+Do not infer a device address from common SONiC examples; the X440-G2 does not match the old `0x50` EEPROM assumption.
 
 ## Common Broadcom ASIC Models in Similar Devices
 
@@ -257,4 +257,3 @@ sudo journalctl -xe | head -50
 3. Keep detailed notes of hardware I2C addresses and pin configurations
 4. Use `i2cdump` to verify sensor values before implementing drivers
 5. Consult the SONiC community early and often
-

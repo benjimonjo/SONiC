@@ -10,7 +10,9 @@ Use this checklist to track progress through all phases of the porting effort.
 - [ ] Obtained Schematic (if available)
 - [ ] Obtained Bill of Materials (BOM)
 - [ ] Obtained Broadcom ASIC datasheet
-- [ ] Identified exact Broadcom ASIC model (Tomahawk/TH2/TH3/TH4)
+- [x] Identified Broadcom ASIC family: Hurricane2 (dual-unit)
+- [ ] Identified exact BCM part number and revision
+- [ ] Confirmed a usable SDK/SAI implementation for Hurricane2 multi-unit operation
 - [ ] Identified Broadcom ASIC revision number
 
 ### 1.2 Hardware Specifications
@@ -19,7 +21,7 @@ Use this checklist to track progress through all phases of the porting effort.
 - [ ] RAM size confirmed
 - [ ] Storage device type and size identified
 - [ ] Total port count identified
-- [ ] Port breakdown (25G, 100G, etc.) documented
+- [x] Port breakdown documented: 48x 1GbE + 4x 10GbE
 - [ ] Port breakout capability documented (if any)
 
 ### 1.3 Power & Cooling
@@ -532,4 +534,3 @@ Use this section to record important findings, workarounds, and lessons learned:
 - [ ] Document any performance limitations
 - [ ] Note any known bugs or issues
 - [ ] Plan for future enhancements
-

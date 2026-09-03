@@ -1,8 +1,8 @@
 # X440-G2 SONiC Port - Phase 1 Discovery Summary
 
 **Date**: 2026-09-02  
-**Status**: Phase 1 (Hardware Discovery) - 60% Complete  
-**Blocker**: ASIC Model Identification Required  
+**Status**: Phase 1 (Hardware Discovery) - active
+**Primary blockers**: Exact BCM part number/SAI support, MIPS64 boot-build path, I2C topology, and port mapping
 
 ## What We Know (Confirmed)
 
@@ -21,7 +21,7 @@ BootROM:                1.0.1.8
 
 ### Connected and Verified
 - ✅ Network connectivity (192.168.0.2)
-- ✅ SSH access with credentials (ollama/Window23)
+- ✅ SSH access verified (credentials are managed outside this repository)
 - ✅ Device responds to CLI commands
 - ✅ All 52 ports visible
 - ✅ Fan tray installed (4 fans)
@@ -29,11 +29,11 @@ BootROM:                1.0.1.8
 
 ## What We Still Need (Critical Path Items)
 
-### 1. ASIC Identification (BLOCKING)
-**Why Important**: Determines entire SAI implementation strategy
+### 1. SAI and Exact ASIC Identity (BLOCKING)
+**Why Important**: Determines whether a usable SONiC forwarding implementation exists.
 
-**Most Likely**: Broadcom Tomahawk (BCM56960)  
-**Alternatives**: Tomahawk 2 (BCM56970) or Tomahawk 3 (BCM56980)
+**Confirmed**: Broadcom Hurricane2 family in a dual-unit configuration.
+**Still required**: Exact BCM part number, SDK version, and evidence that the intended SAI stack supports multi-unit operation.
 
 **How to Determine**:
 - [ ] Check Extreme Networks X440-G2 official datasheet
@@ -69,9 +69,9 @@ Based on port configuration, here's the likely architecture:
 │  48x 1GbE Ports ──┐                    │
 │   4x 10GbE Ports │                    │
 │                  └──→ Broadcom ASIC  │
-│                      (BCM5696x)      │
+│               (Hurricane2, dual-unit) │
 │                        ↓             │
-│  Management Port ──→ CPU (x86_64)  │
+│  Management Port ──→ CPU (MIPS64)   │
 │  Console (RS-232)    └────┬────────│
 │                           │        │
 │  4x Fans ──→ PWM Control  │        │
@@ -202,11 +202,8 @@ Based on port configuration, here's the likely architecture:
 ## Contact Points
 
 - **Device IP**: 192.168.0.2
-- **SSH Credentials**: ollama / Window23
-- **SSH Config**: /home/benjimonjo/.ssh/x440g2_config
-- **Quick Access**: `sshpass -p Window23 ssh -F ~/.ssh/x440g2_config 192.168.0.2`
+- **Authentication**: Use the approved secure credential store or SSH configuration. Do not put passwords in repository documentation.
 
 ---
 
 **Next Update**: After ASIC identification confirmed
-

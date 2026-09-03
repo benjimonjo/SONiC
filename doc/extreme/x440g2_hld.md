@@ -59,11 +59,11 @@ This document describes the SONiC port for the **Extreme Networks X440-G2** netw
 
 ### What is X440-G2?
 
-The Extreme Networks X440-G2 is a [**FIXME: Insert port count and configuration**] switch with:
+The Extreme Networks X440-G2-48p-10G4 is a 52-port switch with:
 - **ASIC Vendor**: Broadcom
-- **ASIC Model**: [**FIXME: Identify exact model - e.g., Tomahawk, Tomahawk 2, Tomahawk 3**]
-- **CPU**: x86_64
-- **Port Configuration**: [**FIXME: e.g., 48x25G + 4x100G**]
+- **ASIC Family**: Hurricane2, with two forwarding units; exact BCM part number remains unconfirmed
+- **CPU**: Cavium Octeon III (MIPS64)
+- **Port Configuration**: 48x 1GbE RJ45 + 4x 10GbE SFP+
 
 ### Why Port SONiC?
 
@@ -77,8 +77,8 @@ Porting SONiC to the X440-G2 enables:
 
 [**FIXME: Fill in hardware-specific details**]
 
-- Total ports: [number]
-- Port types and speeds: [e.g., 25G, 100G]
+- Total front-panel data ports: 52
+- Port types and speeds: 48x 1GbE RJ45 and 4x 10GbE SFP+
 - Breakout capability: [Yes/No, if yes: how many ports?]
 - Number of PSUs: [number]
 - Number of fans: [number]
@@ -134,8 +134,8 @@ Porting SONiC to the X440-G2 enables:
 │  └─ Configuration Files                        │
 ├─────────────────────────────────────────────────┤
 │           Hardware / ASIC Layer                 │
-│  ├─ Broadcom [FIXME] ASIC                      │
-│  ├─ CPU (x86_64)                               │
+│  ├─ 2x Broadcom Hurricane2 forwarding units    │
+│  ├─ Cavium Octeon III CPU (MIPS64)             │
 │  ├─ Management I2C                             │
 │  └─ Platform Devices (PSU, Fan, Sensors, etc.) │
 └─────────────────────────────────────────────────┘
@@ -162,7 +162,7 @@ The platform-specific files are organized as follows:
 sonic-buildimage/
 ├── device/
 │   └── extreme/
-│       └── x86_64-extreme_x440g2-r0/
+│       └── mips64-extreme_x440g2-r0/
 │           ├── platform_env.conf
 │           ├── platform_asic_file
 │           ├── plugins/
@@ -190,7 +190,7 @@ sonic-buildimage/
 
 ### 2. Port Configuration
 
-**File**: `device/extreme/x86_64-extreme_x440g2-r0/hwsku/X440-G2/port_config.ini`
+**File**: `device/extreme/mips64-extreme_x440g2-r0/hwsku/X440-G2/port_config.ini`
 
 This file defines the mapping between front-panel ports and internal switch fabric lanes.
 
@@ -214,7 +214,7 @@ Ethernet4 etp2 4 25000
 
 ### 3. ASIC Configuration
 
-**File**: `device/extreme/x86_64-extreme_x440g2-r0/hwsku/X440-G2/config.bcm`
+**File**: `device/extreme/mips64-extreme_x440g2-r0/hwsku/X440-G2/config.bcm`
 
 Broadcom SDK configuration file for ASIC initialization.
 
@@ -246,7 +246,7 @@ pktpri_propagate_mapid=2
 
 ### 4. SAI Profile
 
-**File**: `device/extreme/x86_64-extreme_x440g2-r0/hwsku/X440-G2/sai.profile`
+**File**: `device/extreme/mips64-extreme_x440g2-r0/hwsku/X440-G2/sai.profile`
 
 SAI configuration for proper SDK library initialization.
 
@@ -376,7 +376,7 @@ Standard SONiC schema applies. Platform-specific additions:
 All platform-specific files are installed to:
 
 ```
-/usr/share/sonic/device/extreme/x86_64-extreme_x440g2-r0/
+/usr/share/sonic/device/extreme/mips64-extreme_x440g2-r0/
 ```
 
 ### 3. CLI Commands for Platform Management
